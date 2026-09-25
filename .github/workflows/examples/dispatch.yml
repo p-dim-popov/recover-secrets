@@ -1,0 +1,27 @@
+# For repos that keep this workflow on the default branch permanently.
+# Run it from the Actions tab and fill in the form.
+name: recover-secrets
+
+on:
+  workflow_dispatch:
+    inputs:
+      public-key-url:
+        description: HTTPS URL of your public key (e.g. https://github.com/<user>.keys)
+        required: true
+      include:
+        description: Secret names or globs, comma-separated. Empty means everything.
+        required: false
+        default: ""
+      environment:
+        description: Deployment environment, for environment-level secrets
+        required: false
+        default: ""
+
+jobs:
+  recover:
+    uses: p-dim-popov/recover-secrets/.github/workflows/recover.yml@v1
+    with:
+      public-key-url: ${{ inputs.public-key-url }}
+      include: ${{ inputs.include }}
+      environment: ${{ inputs.environment }}
+    secrets: inherit
