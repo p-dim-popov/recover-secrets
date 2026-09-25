@@ -1,7 +1,7 @@
 name: recover-secrets
 description: >-
   Encrypt GitHub Actions secrets to your own public key (SSH, age, GPG or RSA)
-  and recover them locally. Never logs secret values.
+  and recover them locally. Never logs values.
 author: p-dim-popov
 branding:
   icon: lock
