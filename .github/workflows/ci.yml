@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  E2E_PUBLIC_KEY: "age1juvuevpt97w6vmr9ffzxltn0kttwqcdqn5ayz7j2z032r79d7cjqc5k4zy"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: sudo apt-get install -y shellcheck
+      - run: shellcheck -x decrypt.sh scripts/*.sh tests/*.sh
+      - run: |
+          curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash
+          ./actionlint -color
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-22.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - if: runner.os == 'Linux'
+        run: sudo apt-get install -y age
+      - if: runner.os == 'macOS'
+        run: brew install age
+      - run: bash tests/run.sh
+
+  # End to end through the reusable workflow. Same-repo PRs and pushes to main
+  # have the CI secrets; PRs from forks do not and this job will fail there.
+  e2e-reusable:
+    uses: ./.github/workflows/recover.yml
+    with:
+      public-key: "age1juvuevpt97w6vmr9ffzxltn0kttwqcdqn5ayz7j2z032r79d7cjqc5k4zy"
+      include: RS_TEST_SECRET
+    secrets: inherit
+
+  e2e-reusable-decrypt:
+    needs: e2e-reusable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: sudo apt-get install -y age
+      - env:
+          BLOB: ${{ needs.e2e-reusable.outputs.blob }}
+          KEY: ${{ secrets.RS_TEST_PRIVATE_KEY }}
+        run: |
+          umask 077
+          printf '%s\n' "$KEY" > key.txt
+          value="$(./decrypt.sh --blob "$BLOB" --key key.txt | jq -r '.RS_TEST_SECRET')"
+          rm -f key.txt
+          test "$value" = "recover-secrets-e2e-ok"
+          test "$(./decrypt.sh --blob "$BLOB" --key <(printf '%s\n' "$KEY") | jq 'length')" = 1
+
+  # End to end through the action directly, with the artifact path.
+  e2e-action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - id: recover
+        uses: ./
+        with:
+          secrets-json: ${{ toJSON(secrets) }}
+          public-key: ${{ env.E2E_PUBLIC_KEY }}
+          include: RS_TEST_SECRET
+          artifact-name: e2e-blob
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: e2e-blob
+          path: dl
+      - run: sudo apt-get install -y age
+      - env:
+          BLOB: ${{ steps.recover.outputs.blob }}
+          KEY: ${{ secrets.RS_TEST_PRIVATE_KEY }}
+        run: |
+          test "$(cat dl/blob.txt)" = "$BLOB"
+          value="$(./decrypt.sh --file dl/blob.txt --key <(printf '%s\n' "$KEY") | jq -r '.RS_TEST_SECRET')"
+          test "$value" = "recover-secrets-e2e-ok"
