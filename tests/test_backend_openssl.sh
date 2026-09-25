@@ -35,6 +35,15 @@ test_envelope_shape() {
   assert_eq '["d","k"]' "$(jq -c 'keys' out)"
   assert_eq 1 "$(wc -l < out | tr -d ' ')"
 }
+test_roundtrip_200k_plaintext() {
+  gen_rsa 2048 k
+  # printf builtin: a 200 KB jq --arg would itself exceed the exec limit.
+  printf '{"BIG":"%s"}' "$(head -c 204800 /dev/zero | tr '\0' 'y')" > plain.json
+  bash "$ENC" encrypt k.pub plain.json out
+  assert_eq 1 "$(wc -l < out | tr -d ' ')"
+  ref_decrypt k out > got.json
+  cmp -s plain.json got.json || fail "200 KB roundtrip mismatch"
+}
 test_encrypt_is_silent() {
   gen_rsa 2048 k; echo '{}' > plain.json
   out="$(bash "$ENC" encrypt k.pub plain.json out 2>&1)"

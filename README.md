@@ -161,6 +161,13 @@ authenticates who produced a blob. Example:
 |---|---|
 | `blob` | The encrypted blob, `rs1:<backend>:<base64>`. |
 
+## Limits
+
+- The secrets JSON reaches the script through one environment variable.
+  On Linux a single environment string is capped at 128 KiB, so secrets
+  JSON over about 128 KiB fails with "Argument list too long".
+- GitHub caps step summaries and job outputs at 1 MiB each.
+
 ## Security notes
 
 - Threat model: anyone with read access to the repository can see the

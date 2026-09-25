@@ -36,9 +36,12 @@ case "$cmd" in
     openssl pkeyutl -encrypt -pubin -inkey "$pub" \
       -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256 \
       -in "$work/pass" -out "$work/key" 2>/dev/null
-    jq -nc --arg k "$(base64 < "$work/key" | tr -d '\n')" \
-           --arg d "$(base64 < "$work/data" | tr -d '\n')" \
-           '{k: $k, d: $d}' > "$out"
+    # printf, not jq --arg: an argument that long fails above roughly 98 KB of
+    # plaintext. base64 needs no JSON escaping. printf is a bash builtin, so
+    # the data never passes through exec arguments.
+    k="$(base64 < "$work/key" 2>/dev/null | tr -d '\n')"
+    d="$(base64 < "$work/data" 2>/dev/null | tr -d '\n')"
+    printf '{"k":"%s","d":"%s"}\n' "$k" "$d" > "$out"
     ;;
   *)
     echo "usage: $0 validate <pub> | encrypt <pub> <plaintext> <out>" >&2
