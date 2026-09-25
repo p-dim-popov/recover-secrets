@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
-# shellcheck source=../scripts/filter.sh
-source "$REPO_ROOT/scripts/filter.sh"
+# shellcheck source=../source/filter.sh
+source "$REPO_ROOT/source/filter.sh"
 
 keys() { jq -c 'keys' <<<"$1"; }
 

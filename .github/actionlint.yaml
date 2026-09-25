@@ -2,16 +2,3 @@ self-hosted-runner:
   labels: []
 
 config-variables: null
-
-# `github.job_workflow_sha` is a real, GitHub-documented context property
-# (docs.github.com/en/actions/reference/workflows-and-actions/contexts) used
-# specifically to pin a reusable workflow's own commit SHA, which is exactly
-# what .github/workflows/recover.yml needs so a caller pinned to
-# `recover.yml@v1` gets the action at `v1`. actionlint 1.7.12's static schema
-# for the `github` context object has not been updated to include it, so it
-# is flagged as an unknown property. This ignores only that specific message
-# on that specific file.
-paths:
-  .github/workflows/recover.yml:
-    ignore:
-      - 'property "job_workflow_sha" is not defined in object type'

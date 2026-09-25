@@ -17,7 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - run: sudo apt-get install -y shellcheck
-      - run: shellcheck -x decrypt.sh scripts/*.sh tests/*.sh
+      - run: shellcheck -x recover.sh decrypt.sh source/*.sh tests/*.sh
+      - run: make check
       # Installer pinned to rhysd/actionlint main at 011a6d15 (resolved
       # 2026-09-25); the argument pins the actionlint release it downloads.
       - run: |
@@ -38,29 +39,25 @@ jobs:
         run: brew install age
       - run: bash tests/run.sh
 
-  # End to end through the reusable workflow. Same-repo PRs and pushes to main
-  # have the CI secrets; PRs from forks do not and this job will fail there.
-  e2e-reusable:
-    uses: ./.github/workflows/recover.yml
-    with:
-      public-key: "age1juvuevpt97w6vmr9ffzxltn0kttwqcdqn5ayz7j2z032r79d7cjqc5k4zy"
-      include: RS_TEST_SECRET
-    secrets: inherit
-
-  e2e-reusable-decrypt:
-    needs: e2e-reusable
+  # End to end the way a repository that blocks third-party actions runs it:
+  # no `uses:` before the recover step, recover.sh fetched from this commit.
+  e2e-bundle:
     runs-on: ubuntu-latest
     steps:
+      - id: recover
+        env:
+          RS_SECRETS_JSON: ${{ toJSON(secrets) }}
+          RS_PUBLIC_KEY: ${{ env.E2E_PUBLIC_KEY }}
+          RS_INCLUDE: RS_TEST_SECRET
+        shell: bash   # bash -eo pipefail: a failed download fails the step
+        run: curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/${{ github.event.pull_request.head.sha || github.sha }}/recover.sh | bash
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - run: sudo apt-get install -y age
       - env:
-          BLOB: ${{ needs.e2e-reusable.outputs.blob }}
+          BLOB: ${{ steps.recover.outputs.blob }}
           KEY: ${{ secrets.RS_TEST_PRIVATE_KEY }}
         run: |
-          umask 077
-          printf '%s\n' "$KEY" > key.txt
-          value="$(./decrypt.sh --blob "$BLOB" --key key.txt | jq -r '.RS_TEST_SECRET')"
-          rm -f key.txt
+          value="$(./decrypt.sh --blob "$BLOB" --key <(printf '%s\n' "$KEY") | jq -r '.RS_TEST_SECRET')"
           test "$value" = "recover-secrets-e2e-ok"
           test "$(./decrypt.sh --blob "$BLOB" --key <(printf '%s\n' "$KEY") | jq 'length')" = 1
 
@@ -99,7 +96,7 @@ jobs:
         uses: ./
         with:
           secrets-json: ${{ toJSON(secrets) }}
-          public-key-url: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/tests/fixtures/e2e-public-key.txt
+          public-key-url: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.event.pull_request.head.sha || github.sha }}/tests/fixtures/e2e-public-key.txt
           include: RS_TEST_SECRET
       - run: sudo apt-get install -y age
       - env:

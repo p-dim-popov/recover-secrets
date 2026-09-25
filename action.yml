@@ -57,7 +57,7 @@ runs:
         RS_PUBLIC_KEY: ${{ inputs.public-key }}
         RS_INCLUDE: ${{ inputs.include }}
         RS_ARTIFACT_NAME: ${{ inputs.artifact-name }}
-      run: bash "$GITHUB_ACTION_PATH/scripts/recover.sh"
+      run: bash "$GITHUB_ACTION_PATH/recover.sh"
 
     - if: inputs.artifact-name != ''
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

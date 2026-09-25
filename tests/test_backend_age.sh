@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
-ENC="$REPO_ROOT/scripts/encrypt-age.sh"
+ENC="$REPO_ROOT/source/encrypt-age.sh"
 
 test_validate_age_recipient() { gen_age a; bash "$ENC" validate a.pub; }
 test_validate_ssh_ed25519()   { gen_ssh ed25519 s; bash "$ENC" validate s.pub; }

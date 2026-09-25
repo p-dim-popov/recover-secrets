@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sourced by scripts/recover.sh. decrypt.sh carries a byte-identical copy of the
+# Sourced by source/main.sh. decrypt.sh carries a byte-identical copy of the
 # block between BEGIN/END detect; tests/test_decrypt.sh asserts they match.
 
 # BEGIN detect

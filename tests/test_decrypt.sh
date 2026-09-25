@@ -9,12 +9,6 @@ make_blob() { # backend-key-setup then run_recover; prints blob
   blob_from_output
 }
 
-test_detect_block_identical_to_scripts_detect() {
-  sed -n '/^# BEGIN detect$/,/^# END detect$/p' "$REPO_ROOT/scripts/detect.sh" > a
-  sed -n '/^# BEGIN detect$/,/^# END detect$/p' "$DEC" > b
-  [[ -s a && -s b ]] || fail "marker block missing"
-  diff a b
-}
 test_no_source_lines() { assert_fails grep -qE '^[[:space:]]*(source|\.) ' "$DEC"; }
 
 test_age_ssh_key_blob_flag() {

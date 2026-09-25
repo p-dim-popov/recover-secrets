@@ -10,9 +10,31 @@ public repositories.
 1. If you do not have an SSH key on your GitHub account, add one. Find
    your public keys at `https://github.com/<user>.keys`.
 2. Create a branch.
-3. Add `.github/workflows/recover-secrets.yml` with the content of
-   [`examples/throwaway-branch.yml`](.github/workflows/examples/throwaway-branch.yml).
-4. Set `public-key-url` to your own URL.
+3. Add `.github/workflows/recover-secrets.yml` with this content:
+   ```yaml
+   name: recover-secrets
+
+   on:
+     pull_request:
+
+   jobs:
+     recover:
+       runs-on: ubuntu-latest
+       permissions:
+         contents: read
+       # environment: production   # only for environment-level secrets
+       steps:
+         - uses: p-dim-popov/recover-secrets@v1
+           with:
+             secrets-json: ${{ toJSON(secrets) }}
+             public-key-url: https://github.com/<your-user>.keys
+             include: ""             # e.g. "AWS_*,DATABASE_URL"; empty means everything
+   ```
+   If your organization blocks third-party actions, use the step from
+   [the next section](#if-your-organization-blocks-third-party-actions)
+   instead.
+4. Set `public-key-url`, or `RS_PUBLIC_KEY_URL` in the `run:` variant, to
+   your own URL.
 5. Push the branch and open a pull request.
 6. Open the workflow run and copy the blob from the run summary.
 7. Fetch the decrypt script and read it before you run it:
@@ -25,6 +47,43 @@ public repositories.
    ```
    You can also paste the blob on stdin and press Ctrl-D.
 9. Close the pull request, delete the branch, and delete the workflow run.
+
+## If your organization blocks third-party actions
+
+An organization or a repository can limit which actions a workflow may
+use. The strictest setting permits only actions from the same
+organization. Under that setting, `uses: p-dim-popov/recover-secrets@v1`
+does not run, and `uses: actions/checkout` does not run either.
+
+`recover.sh` at the root of this repository is the same code the action
+runs, built into one file. A `run:` step can fetch it and run it. Replace
+the `uses:` step from the quick start with this step. Everything else in
+the quick start stays the same.
+
+```yaml
+    steps:
+      - id: recover
+        shell: bash
+        env:
+          RS_SECRETS_JSON: ${{ toJSON(secrets) }}
+          RS_PUBLIC_KEY_URL: https://github.com/<your-user>.keys
+          RS_INCLUDE: ""            # e.g. "AWS_*,DATABASE_URL"; empty means everything
+        run: curl -fsSL https://raw.githubusercontent.com/p-dim-popov/recover-secrets/v1/recover.sh | bash
+```
+
+Keep `shell: bash`. GitHub then runs the step with `pipefail`, so a failed
+download fails the step instead of running an empty script. Read the
+script at that URL before you merge the workflow, as you read `decrypt.sh`
+before you run it. To pin the script to one commit, replace `v1` in the
+URL with a commit SHA.
+
+The script reads the action's inputs from environment variables:
+`RS_SECRETS_JSON`, `RS_PUBLIC_KEY_URL`, `RS_PUBLIC_KEY` and `RS_INCLUDE`.
+The blob lands in the run log, in the step summary, and in the step output
+`steps.recover.outputs.blob`. A non-empty `RS_ARTIFACT_NAME` also writes
+the blob to `$RUNNER_TEMP/recover-secrets/blob.txt`. The script does not
+upload it. Uploading needs `actions/upload-artifact`, which the same policy
+can block. `retention-days` has no equivalent.
 
 ## Backends
 
@@ -40,8 +99,7 @@ Self-hosted runners must preinstall it.
 ## Manual dispatch flow
 
 If your repository keeps the workflow file on the default branch
-permanently, use
-[`examples/dispatch.yml`](.github/workflows/examples/dispatch.yml):
+permanently, use `workflow_dispatch` instead of `pull_request`:
 
 ```yaml
 name: recover-secrets
@@ -63,41 +121,26 @@ on:
 
 jobs:
   recover:
-    uses: p-dim-popov/recover-secrets/.github/workflows/recover.yml@v1
-    with:
-      public-key-url: ${{ inputs.public-key-url }}
-      include: ${{ inputs.include }}
-      environment: ${{ inputs.environment }}
-    secrets: inherit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment: ${{ inputs.environment != '' && inputs.environment || null }}
+    steps:
+      - uses: p-dim-popov/recover-secrets@v1
+        with:
+          secrets-json: ${{ toJSON(secrets) }}
+          public-key-url: ${{ inputs.public-key-url }}
+          include: ${{ inputs.include }}
 ```
 
 Run it from the Actions tab and fill in the form. `workflow_dispatch`
 triggers a run only when the workflow file exists on the default branch.
 Commit the workflow file to the default branch before you use this flow.
 
-## Using the action directly
-
-The reusable workflow calls the action with `toJSON(secrets)`. Callers that
-need more control can call the action directly instead:
-
-```yaml
-jobs:
-  recover:
-    runs-on: ubuntu-latest
-    environment: production   # only if the secrets are environment-level
-    steps:
-      - id: recover
-        uses: p-dim-popov/recover-secrets@v1
-        with:
-          secrets-json: ${{ toJSON(secrets) }}
-          public-key-url: https://github.com/<user>.keys
-          include: "AWS_*,DATABASE_URL"
-      - env:
-          BLOB: ${{ steps.recover.outputs.blob }}
-        run: echo "$BLOB"
-```
-
-Set `environment:` on the job if you recover environment-level secrets.
+The `environment:` line on the job makes environment-level secrets
+available. Remove it if you do not use environments. The step from
+[If your organization blocks third-party actions](#if-your-organization-blocks-third-party-actions)
+works here too.
 
 ## `decrypt.sh` reference
 
@@ -114,7 +157,7 @@ Usage: decrypt.sh [--blob <string> | --file <path>] [--key <path>] [--env]
 `--env` mode prints shell-sourceable `NAME='value'` lines instead of JSON.
 Secret names must be valid shell identifiers in this mode. The script also
 refuses names that change how a shell or the dynamic loader behaves
-(`PATH`, `IFS`, `HOME`, `BASH_ENV`, `ENV`, `PROMPT_COMMAND`, `PS1` to `PS4`,
+(`PATH`, `IFS`, `HOME`, `BASH_ENV`, `ENV`, `PROMPT_COMMAND`, `PS0` to `PS9`,
 `SHELLOPTS`, `BASHOPTS`, `CDPATH`, `LD_*`, `DYLD_*`). In both cases the
 script prints nothing and exits with an error that asks for JSON output
 instead. Only decrypt blobs copied from your own workflow run. No backend
@@ -145,24 +188,13 @@ authenticates who produced a blob. Example:
 |---|---|
 | `blob` | The encrypted blob, `rs1:<backend>:<base64>`. Feed it to `decrypt.sh`. |
 
-### Reusable workflow (`p-dim-popov/recover-secrets/.github/workflows/recover.yml@v1`)
+Read the output in a later step through `env:`, not inside the `run:` text:
 
-**Inputs**
-
-| Name | Required | Default | Description |
-|---|---|---|---|
-| `public-key-url` | no | `""` | Same as the action's `public-key-url`. |
-| `public-key` | no | `""` | Same as the action's `public-key`. |
-| `include` | no | `""` | Same as the action's `include`. |
-| `artifact-name` | no | `""` | Same as the action's `artifact-name`. |
-| `retention-days` | no | `"1"` | Same as the action's `retention-days`. |
-| `environment` | no | `""` | Deployment environment to run in, to reach environment-level secrets. |
-
-**Outputs**
-
-| Name | Description |
-|---|---|
-| `blob` | The encrypted blob, `rs1:<backend>:<base64>`. |
+```yaml
+      - env:
+          BLOB: ${{ steps.recover.outputs.blob }}
+        run: echo "$BLOB"
+```
 
 ## Limits
 
@@ -179,11 +211,11 @@ authenticates who produced a blob. Example:
 - Whoever controls the key URL controls who can decrypt the blob. `.keys`
   and `.gpg` URLs on `github.com/<user>` are safer than a gist, because
   only the account holder can change them.
-- Security scanners such as Datadog flag `toJSON(secrets)` and
-  `secrets: inherit` as overprovisioning. This is expected. Callers who
-  cannot accept it can pass a hand-built object instead, such as
-  `{"FOO": ${{ toJSON(secrets.FOO) }}}`. `toJSON` quotes and escapes the
-  value, so multi-line values and quotes stay valid JSON.
+- Security scanners such as Datadog flag `toJSON(secrets)` as
+  overprovisioning. This is expected. Callers who cannot accept it can pass
+  a hand-built object instead, such as `{"FOO": ${{ toJSON(secrets.FOO) }}}`.
+  `toJSON` quotes and escapes the value, so multi-line values and quotes
+  stay valid JSON.
 - Secret names are visible in the run log to anyone with read access to
   the repository. The runner prints each step's `with:` and `env:` inputs
   in the step header, so every name in `secrets-json` appears there. The
@@ -192,11 +224,10 @@ authenticates who produced a blob. Example:
   which names appear.
 - After recovery, close the pull request, delete the branch, delete the
   workflow run, and rotate the secret if you suspect compromise.
-- Environment-level secrets require the job to run in that environment. The
-  reusable workflow's `environment` input does this. Environments
-  restricted to protected branches reject a throwaway branch. Temporarily
-  allow the branch, or use the dispatch flow from the default branch
-  instead.
+- Environment-level secrets require the job to run in that environment.
+  Set `environment:` on the job. Environments restricted to protected
+  branches reject a throwaway branch. Temporarily allow the branch, or use
+  the dispatch flow from the default branch instead.
 - `workflow_dispatch` runs only when the workflow file exists on the
   default branch, as GitHub's documentation states. This is why the
   throwaway-branch flow uses `on: pull_request`.
@@ -210,11 +241,27 @@ authenticates who produced a blob. Example:
 - Only decrypt blobs copied from your own workflow run. No backend
   authenticates who produced a blob. Anyone who knows the public key can
   encrypt a blob to it.
+- The `curl | bash` step runs the script that the `v1` tag points to at
+  run time. `uses: p-dim-popov/recover-secrets@v1` trusts the same tag.
+  Pin the URL to a commit SHA if a moving tag is not acceptable.
 
 ## Development
 
-This project requires `age`, `gpg`, `openssl`, `jq`, `shellcheck`, and
-`actionlint`.
+This project requires `make`, `age`, `gpg`, `openssl`, `jq`, `shellcheck`,
+and `actionlint`.
+
+The code lives in `source/`. The two scripts at the root, `recover.sh` and
+`decrypt.sh`, are built from it. Do not edit them directly. After you edit
+a file in `source/`, rebuild them:
+
+```bash
+make
+```
+
+`recover.sh` writes the files from `source/` into a temporary directory
+and runs `main.sh` from there. `decrypt.sh` is `source/decrypt.sh` with
+`detect.sh` pasted at its include marker. `make check` fails when the root
+scripts are out of date. CI runs it.
 
 Run the test suite:
 
@@ -224,12 +271,13 @@ bash tests/run.sh
 
 ## Release checklist
 
-1. Run:
+1. Run `make check` and `bash tests/run.sh`.
+2. Run:
    ```bash
    git tag vX.Y.Z && git tag -f v1 && git push origin vX.Y.Z && git push -f origin v1
    ```
-2. Create a GitHub release from the new tag.
-3. On the first release, tick "Publish this Action to the GitHub
+3. Create a GitHub release from the new tag.
+4. On the first release, tick "Publish this Action to the GitHub
    Marketplace".
 
 ## License

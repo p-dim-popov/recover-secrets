@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
-# shellcheck source=../scripts/detect.sh
-source "$REPO_ROOT/scripts/detect.sh"
+# shellcheck source=../source/detect.sh
+source "$REPO_ROOT/source/detect.sh"
 
 test_detects_pem_rsa()        { gen_rsa 2048 k; assert_eq openssl "$(detect_key_format k.pub)"; }
 test_detects_pem_rsa_legacy() { printf -- '-----BEGIN RSA PUBLIC KEY-----\nAAAA\n-----END RSA PUBLIC KEY-----\n' > k; assert_eq openssl "$(detect_key_format k)"; }

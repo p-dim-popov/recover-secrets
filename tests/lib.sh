@@ -71,13 +71,13 @@ gen_gpg() { # homedir pubout
 
 # ---- driver runner --------------------------------------------------------
 
-run_recover() { # ENV=value ... ; runs scripts/recover.sh with fake GitHub files
+run_recover() { # ENV=value ... ; runs $RS_DRIVER (default source/main.sh) with fake GitHub files
   : > "$TMP/output"; : > "$TMP/summary"; : > "$TMP/log"; : > "$TMP/err"
   mkdir -p "$TMP/runner_temp" "$TMP/tmpdir"
   env GITHUB_OUTPUT="$TMP/output" GITHUB_STEP_SUMMARY="$TMP/summary" \
       RUNNER_TEMP="$TMP/runner_temp" TMPDIR="$TMP/tmpdir" \
       RS_SECRETS_JSON= RS_PUBLIC_KEY= RS_PUBLIC_KEY_URL= RS_INCLUDE= RS_ARTIFACT_NAME= \
-      "$@" bash "$REPO_ROOT/scripts/recover.sh" > "$TMP/log" 2> "$TMP/err"
+      "$@" bash "${RS_DRIVER:-$REPO_ROOT/source/main.sh}" > "$TMP/log" 2> "$TMP/err"
 }
 blob_from_output() { sed -n 's/^blob=//p' "$TMP/output"; }
 
