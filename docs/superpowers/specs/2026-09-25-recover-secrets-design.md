@@ -19,8 +19,11 @@ safe even on public repositories.
 would rather recover it than rotate it.
 
 **Success:** open a throwaway PR (or run a dispatch), copy one string from the
-run summary, run `decrypt.sh`, see plaintext. Nothing readable ever appears in
-logs, summaries, outputs, artifacts, or on the runner's disk after the step.
+run summary, run `decrypt.sh`, see plaintext. The action itself never writes
+a secret name or value to logs, summaries, outputs, artifacts, or the runner's
+disk after the step. The runner's own step header lists the `with:` and
+`env:` inputs, so secret names appear there; the values rely on GitHub's
+masking.
 CI proves the roundtrip and the absence of leaks for every backend.
 
 ## 2. Decisions
@@ -105,7 +108,7 @@ for the Marketplace page.
 
 - `on: workflow_call`. Inputs mirror the action minus `secrets-json`, plus
   `environment` (optional string). Output `blob`.
-- One job, `runs-on: ubuntu-latest`, `permissions: {}`,
+- One job, `runs-on: ubuntu-latest`, `permissions: contents: read`,
   `environment: ${{ inputs.environment }}`.
 - Calls `uses: p-dim-popov/recover-secrets@v1` (not `./`) with
   `secrets-json: ${{ toJSON(secrets) }}`, so a caller pinned to
@@ -251,7 +254,7 @@ The driver prints nothing it did not generate itself.
   them.
 - `toJSON(secrets)` and `secrets: inherit` are flagged by scanners (Datadog
   and others) as overprovisioning. Expected. Callers who cannot accept it can
-  pass a hand-built object like `{"FOO": "${{ secrets.FOO }}"}`.
+  pass a hand-built object like `{"FOO": ${{ toJSON(secrets.FOO) }}}`.
 - After recovery: close the PR, delete the branch, delete the workflow run,
   rotate any secret if compromise is suspected.
 - Environment-level secrets: the job must run in that environment. The
@@ -262,7 +265,8 @@ The driver prints nothing it did not generate itself.
   branch (GitHub docs), hence the throwaway-branch flow uses `on: pull_request`
   (or `on: push`). Same-repo branches get secrets on `pull_request`; forks do
   not.
-- The action needs no token: `permissions: {}` in the reusable workflow.
+- The reusable workflow grants only `permissions: contents: read`, which the
+  checkout of the action needs. The action itself uses no token.
 
 ## 9. Testing
 

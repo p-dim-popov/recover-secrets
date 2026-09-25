@@ -18,7 +18,7 @@
 - Key fetch: `curl --proto '=https'`, 64 KiB cap (`--max-filesize 65536`), 20 s timeout (`--max-time 20`), https-only (spec §5 step 3).
 - openssl backend: RSA only, ≥ 2048 bits, AES-256-CBC with PBKDF2 100000 iterations, RSA-OAEP SHA-256 hash and MGF1 (spec §6).
 - `github_token` is excluded unless `include` names it exactly (spec §5 step 5).
-- No secret name or value ever appears in stderr, stdout, `$GITHUB_OUTPUT`, `$GITHUB_STEP_SUMMARY`, or a file that survives the step (spec §7, §8).
+- The action itself never writes a secret name or value to stderr, stdout, `$GITHUB_OUTPUT`, `$GITHUB_STEP_SUMMARY`, or a file that survives the step (spec §7, §8). The runner's step header shows the `with:`/`env:` inputs, so secret names appear there, with values masked by GitHub.
 - Every temp file is shredded (`shred -u`, fallback `rm -rf`) on EXIT, including failure (spec §5 step 1).
 - `decrypt.sh` has no `source` lines and depends only on jq plus the backend tool named by the blob (spec §4.6).
 - `scripts/detect.sh` and the `# BEGIN detect` … `# END detect` block in `decrypt.sh` must be byte-identical (spec §4.4).

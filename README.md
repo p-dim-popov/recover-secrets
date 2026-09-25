@@ -90,7 +90,9 @@ jobs:
           secrets-json: ${{ toJSON(secrets) }}
           public-key-url: https://github.com/<user>.keys
           include: "AWS_*,DATABASE_URL"
-      - run: echo "${{ steps.recover.outputs.blob }}"
+      - env:
+          BLOB: ${{ steps.recover.outputs.blob }}
+        run: echo "$BLOB"
 ```
 
 Set `environment:` on the job when the secrets being recovered are
@@ -129,7 +131,7 @@ authenticates who produced a blob. Example:
 
 | Name | Required | Default | Description |
 |---|---|---|---|
-| `secrets-json` | yes | none | JSON object of the secrets to recover. Normally the result of calling `toJSON` on the workflow's `secrets` context. A hand-built object such as `{"FOO": "<value of secrets.FOO>"}` also works. |
+| `secrets-json` | yes | none | JSON object of the secrets to recover. Normally the result of calling `toJSON` on the workflow's `secrets` context. A hand-built object such as `{"FOO": ${{ toJSON(secrets.FOO) }}}` also works. |
 | `public-key-url` | no | `""` | HTTPS URL of the public key to encrypt to. Accepts an SSH keys list such as `https://github.com/<user>.keys`, a GPG key such as `https://github.com/<user>.gpg`, an age1 recipient, or a PEM RSA public key. Use this or `public-key`. |
 | `public-key` | no | `""` | The public key text itself, as an alternative to `public-key-url`. |
 | `include` | no | `""` | Comma-separated secret names or globs (`AWS_*`). Empty means every secret except `github_token`, which is only included when named exactly. |
@@ -179,7 +181,14 @@ authenticates who produced a blob. Example:
 - `toJSON(secrets)` and `secrets: inherit` are flagged by security scanners
   (Datadog and others) as overprovisioning. This is expected. Callers who
   cannot accept it can pass a hand-built object instead, such as
-  `{"FOO": "${{ secrets.FOO }}"}`.
+  `{"FOO": ${{ toJSON(secrets.FOO) }}}`. `toJSON` quotes and escapes the
+  value, so multi-line values and quotes stay valid JSON.
+- Secret names are visible in the run log to anyone with read access to
+  the repository. The runner prints each step's `with:` and `env:` inputs
+  in the step header, so every name in `secrets-json` appears there. The
+  values in that header rely on GitHub's secret masking. The action itself
+  never writes a secret name or value. A hand-built `secrets-json` limits
+  which names appear.
 - After recovery: close the pull request, delete the branch, delete the
   workflow run, and rotate the secret if compromise is suspected.
 - Environment-level secrets require the job to run in that environment. The
