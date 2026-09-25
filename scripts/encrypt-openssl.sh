@@ -29,7 +29,7 @@ case "$cmd" in
     plaintext="${3:-}"; out="${4:-}"
     [[ -n "$pub" && -n "$plaintext" && -n "$out" ]] || exit 64
     work="$(mktemp -d)"
-    openssl rand -hex 32 > "$work/pass"
+    openssl rand -hex 32 > "$work/pass" 2>/dev/null
     openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -salt \
       -pass "file:$work/pass" -in "$plaintext" -out "$work/data" 2>/dev/null
     openssl pkeyutl -encrypt -pubin -inkey "$pub" \
