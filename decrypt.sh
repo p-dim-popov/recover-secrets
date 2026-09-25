@@ -118,6 +118,10 @@ jq -e 'type == "object"' "$WORK/plain" >/dev/null 2>&1 \
   || die "Decrypted data is not a JSON object. Wrong key or corrupted blob"
 
 if $ENV_OUT; then
+  # secrets-json is free-form; a key isn't guaranteed to be a safe shell
+  # variable name. Refuse to emit anything sourceable-looking otherwise.
+  jq -e 'all(keys[]; test("^[A-Za-z_][A-Za-z0-9_]*$"))' "$WORK/plain" >/dev/null 2>&1 \
+    || die "A secret name is not a valid shell variable name; use JSON output instead"
   # NAME='value' with embedded single quotes closed/escaped/reopened: it's -> 'it'\''s'
   # @sh is jq's built-in shell-quoting format; it produces exactly that idiom.
   jq -r 'to_entries[] | "\(.key)=\(.value | tostring | @sh)"' "$WORK/plain"

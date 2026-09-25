@@ -94,6 +94,20 @@ test_error_openssl_needs_key() {
 test_error_both_blob_and_file() { assert_fails bash "$DEC" --blob x --file y; }
 test_error_unknown_flag()       { assert_fails bash "$DEC" --wat; }
 test_help() { assert_contains "$(bash "$DEC" --help)" '--env'; }
+test_env_rejects_unsafe_key_names() {
+  gen_ssh ed25519 s
+  run_recover RS_PUBLIC_KEY="$(cat s.pub)" RS_SECRETS_JSON='{"A; touch PWNED; B":"v","OK":"1"}'
+  blob="$(blob_from_output)"
+  rc=0
+  out="$(bash "$DEC" --blob "$blob" --key s --env 2>errfile)" || rc=$?
+  err="$(cat errfile)"
+  [[ $rc -ne 0 ]] || fail "expected --env to fail on an unsafe key name"
+  assert_contains "$err" 'not a valid shell variable name'
+  assert_eq "" "$out"
+  [[ ! -e PWNED ]] || fail "PWNED was created; --env output was unsafe to source"
+  bash "$DEC" --blob "$blob" --key s | jq -e 'has("OK")' >/dev/null \
+    || fail "plain JSON output should still succeed for the same blob"
+}
 test_temp_cleaned() {
   gen_ssh ed25519 s; blob="$(make_blob "$(cat s.pub)")"
   mkdir t; TMPDIR="$PWD/t" bash "$DEC" --blob "$blob" --key s >/dev/null
