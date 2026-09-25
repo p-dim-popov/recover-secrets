@@ -29,7 +29,7 @@ never touches GitHub, so it is safe on public repositories.
 | Key type | Where to get one | `public-key-url` to use | Decrypt with |
 |---|---|---|---|
 | age / SSH | `ssh-keygen -t ed25519`, or an existing key | `https://github.com/<user>.keys` | `decrypt.sh --key ~/.ssh/id_ed25519` (the default) |
-| GPG | An existing signing key | `https://github.com/<user>.gpg` | `decrypt.sh` (uses your keyring) |
+| GPG | A GPG key with an encryption subkey | `https://github.com/<user>.gpg` | `decrypt.sh` (uses your keyring) |
 | openssl RSA | `openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out key.pem && openssl pkey -in key.pem -pubout -out key.pub` | A gist raw URL | `decrypt.sh --key key.pem` |
 
 `age` is installed on GitHub-hosted runners with `apt-get` when it is

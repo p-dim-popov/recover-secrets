@@ -39,5 +39,21 @@ test_multiple_keys_in_file_all_become_recipients() {
   assert_eq '{"a":1}' "$(GNUPGHOME=gh1 gpg --batch --quiet --decrypt out 2>/dev/null)"
   assert_eq '{"a":1}' "$(GNUPGHOME=gh2 gpg --batch --quiet --decrypt out 2>/dev/null)"
 }
+test_unusable_key_in_file_is_skipped() {
+  gen_gpg gh pub_good.asc
+  mkdir -m 700 gh2
+  GNUPGHOME=gh2 gpg --batch --quiet --passphrase '' --quick-gen-key 'y <y@example.com>' ed25519 cert never 2>/dev/null
+  GNUPGHOME=gh2 gpg --batch --export --armor > pub_cert.asc
+  cat pub_good.asc pub_cert.asc > both.asc
+  err="$(bash "$ENC" validate both.asc 2>&1)"
+  assert_eq '::warning::Skipped 1 unusable GPG key(s) (no encryption capability, expired or revoked)' "$err"
+  echo '{"a":1}' > plain.json
+  bash "$ENC" encrypt both.asc plain.json out
+  assert_eq '{"a":1}' "$(GNUPGHOME=gh gpg --batch --quiet --decrypt out 2>/dev/null)"
+}
+test_validate_ok_is_silent() {
+  gen_gpg gh pub.asc
+  assert_eq "" "$(bash "$ENC" validate pub.asc 2>&1)"
+}
 
 run_tests
