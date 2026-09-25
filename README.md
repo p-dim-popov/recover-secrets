@@ -109,12 +109,16 @@ Usage: decrypt.sh [--blob <string> | --file <path>] [--key <path>] [--env]
 `-h` / `--help` prints this text.
 
 `--env` mode prints shell-sourceable `NAME='value'` lines instead of JSON.
-Secret names must be valid shell identifiers in this mode; the script
-refuses to emit anything else and falls back to an error asking for JSON
-output instead. Example:
+Secret names must be valid shell identifiers in this mode, and names that
+change how a shell or the dynamic loader behaves (`PATH`, `IFS`, `HOME`,
+`BASH_ENV`, `ENV`, `PROMPT_COMMAND`, `PS1` to `PS4`, `SHELLOPTS`,
+`BASHOPTS`, `CDPATH`, `LD_*`, `DYLD_*`) are refused. In both cases the
+script prints nothing and exits with an error asking for JSON output
+instead. Only decrypt blobs copied from your own workflow run: no backend
+authenticates who produced a blob. Example:
 
 ```bash
-bash decrypt.sh --file blob.txt --env > .env
+(umask 077; bash decrypt.sh --file blob.txt --env > .env)
 ```
 
 ## Inputs and outputs
@@ -185,6 +189,9 @@ bash decrypt.sh --file blob.txt --env > .env
   plaintext parses as a JSON object.
 - `github_token` is excluded from the secrets unless `include` names it
   exactly.
+- Only decrypt blobs copied from your own workflow run. No backend
+  authenticates who produced a blob: anyone who knows the public key can
+  encrypt a blob to it.
 
 ## Development
 

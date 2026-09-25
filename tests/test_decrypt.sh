@@ -96,17 +96,35 @@ test_error_unknown_flag()       { assert_fails bash "$DEC" --wat; }
 test_help() { assert_contains "$(bash "$DEC" --help)" '--env'; }
 test_env_rejects_unsafe_key_names() {
   gen_ssh ed25519 s
-  run_recover RS_PUBLIC_KEY="$(cat s.pub)" RS_SECRETS_JSON='{"A; touch PWNED; B":"v","OK":"1"}'
+  # A safe blob: the --env output sources cleanly in a subshell.
+  run_recover RS_PUBLIC_KEY="$(cat s.pub)" RS_SECRETS_JSON='{"OK":"1","MY_PATH":"/x"}'
   blob="$(blob_from_output)"
-  rc=0
-  out="$(bash "$DEC" --blob "$blob" --key s --env 2>errfile)" || rc=$?
-  err="$(cat errfile)"
-  [[ $rc -ne 0 ]] || fail "expected --env to fail on an unsafe key name"
-  assert_contains "$err" 'not a valid shell variable name'
-  assert_eq "" "$out"
-  [[ ! -e PWNED ]] || fail "PWNED was created; --env output was unsafe to source"
-  bash "$DEC" --blob "$blob" --key s | jq -e 'has("OK")' >/dev/null \
-    || fail "plain JSON output should still succeed for the same blob"
+  bash "$DEC" --blob "$blob" --key s --env > safe.env
+  # shellcheck disable=SC1091
+  ( source ./safe.env; [[ "$OK" == 1 && "$MY_PATH" == /x ]] ) \
+    || fail "sourcing the --env output of a safe blob failed"
+
+  # Unsafe blobs: each one fails before any output.
+  local json expect i=0
+  for json in '{"A; touch PWNED; B":"v","OK":"1"}' '{"whoami\n":"v","OK":"1"}' \
+              '{"PATH":"/nonexistent","OK":"1"}'; do
+    i=$((i+1))
+    case "$json" in
+      *PATH*) expect='would override a shell or loader variable' ;;
+      *)      expect='not a valid shell variable name' ;;
+    esac
+    run_recover RS_PUBLIC_KEY="$(cat s.pub)" RS_SECRETS_JSON="$json"
+    blob="$(blob_from_output)"
+    [[ -n "$blob" ]] || fail "case $i: recover produced no blob"
+    rc=0
+    bash "$DEC" --blob "$blob" --key s --env > "out$i.env" 2>errfile || rc=$?
+    [[ $rc -ne 0 ]] || fail "case $i: expected --env to fail on an unsafe key name"
+    assert_contains "$(cat errfile)" "$expect"
+    [[ ! -s "out$i.env" ]] || fail "case $i: --env printed output before failing"
+    [[ ! -e PWNED ]] || fail "case $i: PWNED was created"
+    bash "$DEC" --blob "$blob" --key s | jq -e 'has("OK")' >/dev/null \
+      || fail "case $i: plain JSON output should still succeed for the same blob"
+  done
 }
 test_temp_cleaned() {
   gen_ssh ed25519 s; blob="$(make_blob "$(cat s.pub)")"

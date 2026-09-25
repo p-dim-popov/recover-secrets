@@ -120,8 +120,15 @@ jq -e 'type == "object"' "$WORK/plain" >/dev/null 2>&1 \
 if $ENV_OUT; then
   # secrets-json is free-form; a key isn't guaranteed to be a safe shell
   # variable name. Refuse to emit anything sourceable-looking otherwise.
-  jq -e 'all(keys[]; test("^[A-Za-z_][A-Za-z0-9_]*$"))' "$WORK/plain" >/dev/null 2>&1 \
+  # \A and \z anchor the whole string: jq's $ also matches before a trailing
+  # newline, which would let a key such as "whoami\n" through.
+  jq -e 'all(keys[]; test("\\A[A-Za-z_][A-Za-z0-9_]*\\z"))' "$WORK/plain" >/dev/null 2>&1 \
     || die "A secret name is not a valid shell variable name; use JSON output instead"
+  # Names that change how the sourcing shell behaves are refused as well.
+  if jq -e 'any(keys[]; test("\\A(PATH|IFS|BASH_ENV|ENV|PROMPT_COMMAND|PS[0-9]|SHELLOPTS|BASHOPTS|CDPATH|HOME|LD_.*|DYLD_.*)\\z"))' \
+       "$WORK/plain" >/dev/null 2>&1; then
+    die "A secret name would override a shell or loader variable (PATH, IFS, HOME, LD_*, ...); use JSON output instead"
+  fi
   # NAME='value' with embedded single quotes closed/escaped/reopened: it's -> 'it'\''s'
   # @sh is jq's built-in shell-quoting format; it produces exactly that idiom.
   jq -r 'to_entries[] | "\(.key)=\(.value | tostring | @sh)"' "$WORK/plain"
