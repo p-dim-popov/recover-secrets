@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.environment != '' && inputs.environment || null }}
     outputs:
       blob: ${{ steps.recover.outputs.blob }}
     steps:
