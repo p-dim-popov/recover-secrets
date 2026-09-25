@@ -3,7 +3,8 @@
 recover-secrets encrypts GitHub Actions secrets to a public key you control.
 It prints only the encrypted blob. You decrypt the blob on your machine. The
 private key never touches GitHub. This makes the action safe to use on
-public repositories.
+public repositories. Run it as a GitHub Action, or run the same script
+from a plain `run:` step where third-party actions are blocked.
 
 ## Quick start (SSH key, throwaway branch)
 
@@ -37,16 +38,13 @@ public repositories.
    your own URL.
 5. Push the branch and open a pull request.
 6. Open the workflow run and copy the blob from the run summary.
-7. Fetch the decrypt script and read it before you run it:
+7. Decrypt the blob on your machine:
    ```bash
-   curl -O https://raw.githubusercontent.com/p-dim-popov/recover-secrets/v1/decrypt.sh
+   bash <(curl -fsSL https://raw.githubusercontent.com/p-dim-popov/recover-secrets/v1/decrypt.sh) --blob 'rs1:...'
    ```
-8. Decrypt the blob:
-   ```bash
-   bash decrypt.sh --blob 'rs1:...'
-   ```
-   You can also paste the blob on stdin and press Ctrl-D.
-9. Close the pull request, delete the branch, and delete the workflow run.
+   Omit `--blob` to paste the blob on stdin and press Ctrl-D. To read the
+   script before you run it, download it with `curl -O` instead.
+8. Close the pull request, delete the branch, and delete the workflow run.
 
 ## If your organization blocks third-party actions
 
@@ -73,9 +71,8 @@ the quick start stays the same.
 
 Keep `shell: bash`. GitHub then runs the step with `pipefail`, so a failed
 download fails the step instead of running an empty script. Read the
-script at that URL before you merge the workflow, as you read `decrypt.sh`
-before you run it. To pin the script to one commit, replace `v1` in the
-URL with a commit SHA.
+script at that URL before you merge the workflow. To pin the script to one
+commit, replace `v1` in the URL with a commit SHA.
 
 The script reads the action's inputs from environment variables:
 `RS_SECRETS_JSON`, `RS_PUBLIC_KEY_URL`, `RS_PUBLIC_KEY` and `RS_INCLUDE`.
@@ -241,9 +238,10 @@ Read the output in a later step through `env:`, not inside the `run:` text:
 - Only decrypt blobs copied from your own workflow run. No backend
   authenticates who produced a blob. Anyone who knows the public key can
   encrypt a blob to it.
-- The `curl | bash` step runs the script that the `v1` tag points to at
-  run time. `uses: p-dim-popov/recover-secrets@v1` trusts the same tag.
-  Pin the URL to a commit SHA if a moving tag is not acceptable.
+- Every `curl` command in this README fetches a script from the `v1` tag
+  at run time. `recover.sh` runs on the runner and `decrypt.sh` on your
+  machine. `uses: p-dim-popov/recover-secrets@v1` trusts the same tag.
+  Replace `v1` in a URL with a commit SHA to pin that script.
 
 ## Development
 
@@ -272,7 +270,8 @@ bash tests/run.sh
 ## Release checklist
 
 1. Run `make check` and `bash tests/run.sh`.
-2. Run:
+2. Tag the release and move `v1`. The `uses:` reference and both `curl`
+   URLs serve whatever `v1` points to:
    ```bash
    git tag vX.Y.Z && git tag -f v1 && git push origin vX.Y.Z && git push -f origin v1
    ```
