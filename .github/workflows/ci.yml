@@ -18,8 +18,10 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - run: sudo apt-get install -y shellcheck
       - run: shellcheck -x decrypt.sh scripts/*.sh tests/*.sh
+      # Installer pinned to rhysd/actionlint main at 011a6d15 (resolved
+      # 2026-09-25); the argument pins the actionlint release it downloads.
       - run: |
-          curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash
+          curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/011a6d15e749bb3f2d771eed9c7aa0e7e3e10ee7/scripts/download-actionlint.bash | bash -s -- 1.7.12
           ./actionlint -color
 
   test:
@@ -85,4 +87,24 @@ jobs:
         run: |
           test "$(cat dl/blob.txt)" = "$BLOB"
           value="$(./decrypt.sh --file dl/blob.txt --key <(printf '%s\n' "$KEY") | jq -r '.RS_TEST_SECRET')"
+          test "$value" = "recover-secrets-e2e-ok"
+
+  # End to end through the action with public-key-url: the key is fetched from
+  # this commit's copy of tests/fixtures/e2e-public-key.txt.
+  e2e-action-url:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - id: recover
+        uses: ./
+        with:
+          secrets-json: ${{ toJSON(secrets) }}
+          public-key-url: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/tests/fixtures/e2e-public-key.txt
+          include: RS_TEST_SECRET
+      - run: sudo apt-get install -y age
+      - env:
+          BLOB: ${{ steps.recover.outputs.blob }}
+          KEY: ${{ secrets.RS_TEST_PRIVATE_KEY }}
+        run: |
+          value="$(./decrypt.sh --blob "$BLOB" --key <(printf '%s\n' "$KEY") | jq -r '.RS_TEST_SECRET')"
           test "$value" = "recover-secrets-e2e-ok"
