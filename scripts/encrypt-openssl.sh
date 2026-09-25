@@ -20,6 +20,7 @@ trap cleanup EXIT
 case "$cmd" in
   validate)
     [[ -n "$pub" ]] || exit 64
+    grep -q -- '-----BEGIN .*PRIVATE KEY-----' "$pub" 2>/dev/null && exit 1
     openssl rsa -pubin -in "$pub" -noout >/dev/null 2>&1 || exit 1
     bits="$(openssl rsa -pubin -in "$pub" -noout -text 2>/dev/null \
             | sed -n 's/^Public-Key: (\([0-9]*\) bit)$/\1/p')"
