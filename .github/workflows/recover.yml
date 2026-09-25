@@ -1,0 +1,59 @@
+name: recover-secrets
+
+on:
+  workflow_call:
+    inputs:
+      public-key-url:
+        type: string
+        required: false
+        default: ""
+      public-key:
+        type: string
+        required: false
+        default: ""
+      include:
+        type: string
+        required: false
+        default: ""
+      artifact-name:
+        type: string
+        required: false
+        default: ""
+      retention-days:
+        type: string
+        required: false
+        default: "1"
+      environment:
+        description: Deployment environment to run in, to reach environment-level secrets.
+        type: string
+        required: false
+        default: ""
+    outputs:
+      blob:
+        description: The encrypted blob, `rs1:<backend>:<base64>`.
+        value: ${{ jobs.recover.outputs.blob }}
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment: ${{ inputs.environment }}
+    outputs:
+      blob: ${{ steps.recover.outputs.blob }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: p-dim-popov/recover-secrets
+          ref: ${{ github.job_workflow_sha }}
+          path: recover-secrets-action
+          persist-credentials: false
+      - id: recover
+        uses: ./recover-secrets-action
+        with:
+          secrets-json: ${{ toJSON(secrets) }}
+          public-key-url: ${{ inputs.public-key-url }}
+          public-key: ${{ inputs.public-key }}
+          include: ${{ inputs.include }}
+          artifact-name: ${{ inputs.artifact-name }}
+          retention-days: ${{ inputs.retention-days }}

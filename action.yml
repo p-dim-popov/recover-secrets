@@ -1,0 +1,71 @@
+name: recover-secrets
+description: >-
+  Encrypt GitHub Actions secrets to your own public key (SSH, age, GPG or RSA)
+  so you can recover them locally. Nothing readable is ever written to logs,
+  summaries or artifacts.
+author: p-dim-popov
+branding:
+  icon: lock
+  color: gray-dark
+
+inputs:
+  secrets-json:
+    description: >-
+      JSON object of the secrets to recover. Normally `${{ toJSON(secrets) }}`.
+      A hand-built object such as `{"FOO": "${{ secrets.FOO }}"}` also works.
+    required: true
+  public-key-url:
+    description: >-
+      HTTPS URL of the public key to encrypt to. Accepts an SSH keys list such as
+      https://github.com/<user>.keys, a GPG key such as https://github.com/<user>.gpg,
+      an age1 recipient, or a PEM RSA public key. Use this or `public-key`.
+    required: false
+    default: ""
+  public-key:
+    description: The public key text itself, as an alternative to `public-key-url`.
+    required: false
+    default: ""
+  include:
+    description: >-
+      Comma-separated secret names or globs (`AWS_*`). Empty means every secret
+      except `github_token`, which is only included when named exactly.
+    required: false
+    default: ""
+  artifact-name:
+    description: If set, also upload the encrypted blob as an artifact with this name.
+    required: false
+    default: ""
+  retention-days:
+    description: Retention for the artifact, in days.
+    required: false
+    default: "1"
+
+outputs:
+  blob:
+    description: The encrypted blob, `rs1:<backend>:<base64>`. Feed it to decrypt.sh.
+    value: ${{ steps.recover.outputs.blob }}
+
+runs:
+  using: composite
+  steps:
+    - id: recover
+      shell: bash
+      env:
+        RS_SECRETS_JSON: ${{ inputs.secrets-json }}
+        RS_PUBLIC_KEY_URL: ${{ inputs.public-key-url }}
+        RS_PUBLIC_KEY: ${{ inputs.public-key }}
+        RS_INCLUDE: ${{ inputs.include }}
+        RS_ARTIFACT_NAME: ${{ inputs.artifact-name }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/recover.sh"
+
+    - if: inputs.artifact-name != ''
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ runner.temp }}/recover-secrets/blob.txt
+        retention-days: ${{ inputs.retention-days }}
+        if-no-files-found: error
+
+    - if: always()
+      shell: bash
+      run: rm -rf "$RUNNER_TEMP/recover-secrets"
