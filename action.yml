@@ -11,8 +11,9 @@ branding:
 inputs:
   secrets-json:
     description: >-
-      JSON object of the secrets to recover. Normally `${{ toJSON(secrets) }}`.
-      A hand-built object such as `{"FOO": "${{ secrets.FOO }}"}` also works.
+      JSON object of the secrets to recover. Normally the result of calling
+      toJSON on the workflow's secrets context. A hand-built object such as
+      {"FOO": "<value of secrets.FOO>"} also works.
     required: true
   public-key-url:
     description: >-
