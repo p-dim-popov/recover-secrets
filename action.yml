@@ -1,8 +1,7 @@
 name: recover-secrets
 description: >-
   Encrypt GitHub Actions secrets to your own public key (SSH, age, GPG or RSA)
-  so you can recover them locally. The action never logs secret values. Secret
-  names appear in the runner's step header, and GitHub masks the values there.
+  and recover them locally. Never logs secret values.
 author: p-dim-popov
 branding:
   icon: lock
