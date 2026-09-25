@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
-ENC="$REPO_ROOT/scripts/encrypt-gpg.sh"
+ENC="$REPO_ROOT/source/encrypt-gpg.sh"
 
 test_validate_ok()        { gen_gpg gh pub.asc; bash "$ENC" validate pub.asc; }
 test_rejects_garbage()    { echo nope > k; assert_fails bash "$ENC" validate k; }

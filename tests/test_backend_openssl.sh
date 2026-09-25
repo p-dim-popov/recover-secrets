@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
-ENC="$REPO_ROOT/scripts/encrypt-openssl.sh"
+ENC="$REPO_ROOT/source/encrypt-openssl.sh"
 
 # Reference decrypt, independent of decrypt.sh, so the format itself is pinned.
 ref_decrypt() { # priv envelope -> stdout plaintext

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sourced by scripts/recover.sh.
+# Sourced by source/main.sh.
 
 # glob_to_regex <glob> -> anchored regex for jq's test(). Only * and ? are special.
 glob_to_regex() {
