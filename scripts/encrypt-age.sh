@@ -33,8 +33,8 @@ IGNORED='^(#|[[:space:]]*$)'
 # recipients_from <pub> <out> [warn]: writes supported lines; exit 1 if none.
 recipients_from() {
   local src="$1" dst="$2" warn="${3:-}" skipped
-  grep -E "$SUPPORTED" "$src" > "$dst" || true
-  skipped="$(grep -vE "$SUPPORTED" "$src" | grep -cvE "$IGNORED" || true)"
+  grep -E "$SUPPORTED" "$src" > "$dst" 2>/dev/null || true
+  skipped="$(grep -vE "$SUPPORTED" "$src" 2>/dev/null | grep -cvE "$IGNORED" 2>/dev/null || true)"
   if [[ -n "$warn" && "$skipped" -gt 0 ]]; then
     echo "::warning::Skipped $skipped unsupported key line(s); age accepts age1, ssh-ed25519 and ssh-rsa" >&2
   fi
