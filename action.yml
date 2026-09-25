@@ -1,8 +1,8 @@
 name: recover-secrets
 description: >-
   Encrypt GitHub Actions secrets to your own public key (SSH, age, GPG or RSA)
-  so you can recover them locally. Secret values are never logged. Secret names
-  appear in the runner's step header, with values masked by GitHub.
+  so you can recover them locally. The action never logs secret values. Secret
+  names appear in the runner's step header, and GitHub masks the values there.
 author: p-dim-popov
 branding:
   icon: lock
@@ -11,7 +11,7 @@ branding:
 inputs:
   secrets-json:
     description: >-
-      JSON object of the secrets to recover. Normally the result of calling
+      JSON object of the secrets to recover. It is usually the output of
       toJSON on the workflow's secrets context. A hand-built object such as
       `{"FOO": toJSON(secrets.FOO)}` also works, with toJSON(secrets.FOO)
       written as an expression.
@@ -24,7 +24,7 @@ inputs:
     required: false
     default: ""
   public-key:
-    description: The public key text itself, as an alternative to `public-key-url`.
+    description: The public key text, as an alternative to `public-key-url`.
     required: false
     default: ""
   include:
@@ -34,7 +34,7 @@ inputs:
     required: false
     default: ""
   artifact-name:
-    description: If set, also upload the encrypted blob as an artifact with this name.
+    description: If set, the action also uploads the encrypted blob as an artifact with this name.
     required: false
     default: ""
   retention-days:
