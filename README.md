@@ -12,6 +12,14 @@ The private key never touches GitHub, so the action is safe to use on
 public repositories. Run it as a GitHub Action, or run the same script
 from a plain `run:` step where third-party actions are blocked.
 
+What the workflow run shows to everyone with read access:
+
+![The job summary on GitHub, showing only the encrypted blob](docs/run-summary.png)
+
+What `decrypt.sh` shows on your machine:
+
+![decrypt.sh printing the recovered secrets as JSON](docs/decrypt.svg)
+
 ## Quick start (SSH key, throwaway branch)
 
 1. If you do not have an SSH key on your GitHub account, add one. Find
