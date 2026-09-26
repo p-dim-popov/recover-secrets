@@ -1,8 +1,14 @@
 # recover-secrets
 
-recover-secrets encrypts GitHub Actions secrets to a public key you control.
-It prints only the encrypted blob. You decrypt the blob on your machine. The
-private key never touches GitHub. This makes the action safe to use on
+GitHub Actions secrets are write-only. When the person who set one has
+left, or a repository moves to another organization, the usual fix is to
+break the log masking with `sed` or `base64`. That leaves the plaintext in
+a job log that anyone with read access can open. recover-secrets gets the
+secrets out without exposing them.
+
+recover-secrets encrypts GitHub Actions secrets to a public key you control
+and prints only the encrypted blob. You decrypt the blob on your machine.
+The private key never touches GitHub, so the action is safe to use on
 public repositories. Run it as a GitHub Action, or run the same script
 from a plain `run:` step where third-party actions are blocked.
 
@@ -202,6 +208,10 @@ Read the output in a later step through `env:`, not inside the `run:` text:
 
 ## Security notes
 
+- The runner step makes two kinds of network calls. It fetches the public
+  key from `public-key-url` over HTTPS, and it installs `age` with `apt-get`
+  or `brew` when the runner lacks it. Nothing else leaves the runner.
+  `recover.sh` is one file of about 390 lines. Read it before you use it.
 - Under this threat model, anyone with read access to the repository can
   see the encrypted blob. The blob must be computationally useless without
   the private key. This is the only property the action promises.
