@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Recover a GitHub Actions secret value safely | recover-secrets</title>
+    <meta
+      name="description"
+      content="GitHub Actions secrets are write-only. See or move a secret's value without the base64 trick that leaves it in the log: encrypt it to your own key on the runner, decrypt it locally."
+    />
+    <link rel="canonical" href="https://p-dim-popov.github.io/recover-secrets/" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="/recover-secrets/favicon.svg" type="image/svg+xml" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="recover-secrets" />
+    <meta property="og:title" content="Recover a GitHub Actions secret value safely" />
+    <meta
+      property="og:description"
+      content="Encrypt GitHub Actions secrets to your own public key on the runner and decrypt them on your machine. Only ciphertext reaches the log."
+    />
+    <meta property="og:url" content="https://p-dim-popov.github.io/recover-secrets/" />
+    <meta property="og:image" content="https://p-dim-popov.github.io/recover-secrets/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="recover-secrets: decrypt.sh piped into gh secret set, the value never printed." />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "recover-secrets",
+        "description": "A GitHub Action that encrypts GitHub Actions secrets to your own public key (SSH, age, GPG or RSA) on the runner and prints only ciphertext. You decrypt the blob on your machine.",
+        "url": "https://p-dim-popov.github.io/recover-secrets/",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Linux, macOS",
+        "license": "https://opensource.org/licenses/MIT",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "sameAs": [
+          "https://github.com/p-dim-popov/recover-secrets",
+          "https://github.com/marketplace/actions/recover-secrets"
+        ]
+      }
+    </script>
+    <script>document.documentElement.classList.add('js')</script>
+  </head>
+  <body>
+    <div id="root"><!--app--></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
