@@ -136,7 +136,7 @@ export const faqs: Faq[] = [
   {
     q: 'How do I get environment secrets?',
     a: [
-      'Set environment: on the job. An environment limited to protected branches rejects a throwaway branch. Allow the branch for the run, or use the workflow_dispatch flow from the README.',
+      'Set environment: on the job. An environment limited to protected branches rejects a throwaway branch, so allow that branch in the environment’s rules for the run.',
     ],
   },
   {
