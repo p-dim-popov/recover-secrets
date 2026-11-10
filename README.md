@@ -109,8 +109,8 @@ the quick start stays the same.
 
 Keep `shell: bash`. GitHub then runs the step with `pipefail`, so a failed
 download fails the step instead of running an empty script. Read the
-script at that URL before you merge the workflow. To pin the script to one
-commit, replace `v1` in the URL with a commit SHA.
+script at that URL before you open the pull request. To pin the script to
+one commit, replace `v1` in the URL with a commit SHA.
 
 The script reads the action's inputs from environment variables:
 `RS_SECRETS_JSON`, `RS_PUBLIC_KEY_URL`, `RS_PUBLIC_KEY` and `RS_INCLUDE`.

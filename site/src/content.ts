@@ -118,7 +118,7 @@ export const faqs: Faq[] = [
   {
     q: 'What if my organization blocks third-party actions?',
     a: [
-      'Use the run: step. It fetches recover.sh with curl and runs the same code the action runs. Read the script before you merge the workflow.',
+      'Use the run: step. It fetches recover.sh with curl and runs the same code the action runs. Read the script before you open the pull request.',
     ],
   },
   {
