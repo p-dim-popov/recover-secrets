@@ -1,5 +1,7 @@
 # recover-secrets
 
+Project page: https://p-dim-popov.github.io/recover-secrets/
+
 GitHub Actions secrets are write-only. When the person who set one has
 left, or a repository moves to another organization, the usual fix is to
 break the log masking with `sed` or `base64`. That leaves the plaintext in
@@ -59,6 +61,28 @@ What `decrypt.sh` shows on your machine:
    Omit `--blob` to paste the blob on stdin and press Ctrl-D. To read the
    script before you run it, download it with `curl -O` instead.
 8. Close the pull request, delete the branch, and delete the workflow run.
+
+## Move a secret to another repository
+
+To copy a secret into another repository, pipe the value from `decrypt.sh`
+straight into `gh secret set`. The value does not show on your screen:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/p-dim-popov/recover-secrets/v1/decrypt.sh) \
+  --blob 'rs1:...' | jq -j '.NPM_TOKEN' | gh secret set NPM_TOKEN --repo new-org/new-repo
+```
+
+`jq -j` writes the value without a trailing newline. `gh secret set` reads
+the value from standard input when you omit `--body`. Run one pipe for each
+secret.
+
+A coding agent can run this pipe for you. The value stays out of the
+agent's transcript only while the agent pipes the value and never prints
+it.
+
+Do not pipe `decrypt.sh --env` into `gh secret set -f -`. The `--env`
+output uses shell quoting. When a value contains a `'`, `gh` stops with the
+error "error parsing env file".
 
 ## If your organization blocks third-party actions
 
