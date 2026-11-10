@@ -1,0 +1,30 @@
+[
+ {
+  "shape": "Marquee Hero",
+  "theme": "terminal",
+  "axes": "dark/mono/chromatic-green",
+  "hero": "Stage",
+  "nav": "floating bar",
+  "footer": "statement",
+  "imagery": "the product as text (real recover.sh, decrypt.sh, gh output) and the action lock icon as a glyph picture",
+  "photos": [],
+  "entry": "none",
+  "fingerprint": "stage-hero/split-steps-yaml/rows-sessions/session-at-size/faq-rows/statement-close",
+  "sections": [
+   "Hero (pipe + glyph lock)",
+   "Split (steps + tabbed YAML)",
+   "Rows (three sessions)",
+   "Session at size (pipe + diagram)",
+   "Rows (FAQ details)",
+   "Statement close"
+  ],
+  "signature": "decrypt.sh piped into gh secret set, the value never printed",
+  "waived": [
+   "26b",
+   "44c"
+  ],
+  "prompt": "Landing page for the recover-secrets GitHub Action",
+  "date": "2026-11-10",
+  "mode": "build"
+ }
+]

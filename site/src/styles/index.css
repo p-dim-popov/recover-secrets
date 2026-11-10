@@ -1,0 +1,40 @@
+/* Hallmark · shape: Marquee Hero · genre: atmospheric · theme: Terminal (deal 2/3, seed recover-secrets-github-action-encrypts-2419·849bc0ed·2026-11-10·r0) · job: sign up · draw: 63483b
+ * hero: Stage (swapped from the draw's Corridor after the hero review) · nav: floating bar, square (the theme refuses pills) · footer: statement · imagery: the product (run-summary capture, real recover.sh, decrypt.sh and gh output set as text) and the action's lock icon printed in a real blob's characters · signature: decrypt.sh piped into gh secret set, the value never printed
+ * axes: dark/mono/chromatic-green · posture: committed · contrast: pass · fold: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V5 · weakest: E, two tab sets and long commands on phones; both render complete without script and long lines scroll inside their wells */
+/* Hallmark · waive 26b · no form control and no aria-disabled anywhere on this page · every control on recover-secrets is a copy button, a tab or a link, none can be disabled, and the :active states live in Panda's generated CSS where the static tier cannot read them */
+/* Hallmark · waive 44c · the lock spans both hero rows, head and session, as the finish review asked · the recover-secrets hero is one text column of head, lede, actions and the pipe session, and the lock centres on all of it rather than on the head alone */
+/* Hallmark · dismissed 58 · the 900px windows that reach 88 words hold the workflow YAML, which a reader copies rather than reads; the prose in any window stays under 60 words */
+/* Hallmark · hero-review: fix · 5 findings · 4 resolved 1 partial (type stays at the theme's 3.75rem cap; the lock picture now carries the fold) */
+/* Hallmark · finish-review: subagent · 8 findings · 8 resolved (scored by the reviewer on recapture) · gap: none */
+
+@layer reset, base, tokens, recipes, utilities;
+
+@import url("@fontsource-variable/martian-mono/standard.css");
+@import url("./tokens.css") layer(base);
+@import url("./base.css") layer(base);
+
+@layer base {
+  body { font-stretch: var(--stretch-body); font-variant-numeric: tabular-nums; }
+  h1, h2, h3 { font-weight: var(--display-weight); font-stretch: var(--stretch-display); letter-spacing: var(--tracking-display); line-height: 1.12; }
+  code, pre, kbd, samp { font-family: var(--font-body); font-size: 1em; }
+  pre { margin: 0; }
+  ol, ul { list-style: none; margin: 0; padding: 0; }
+  summary { cursor: pointer; }
+  summary::-webkit-details-marker { display: none; }
+  details:not([open]) > :not(summary) { display: none !important; }
+}
+
+/* Script-only controls stay hidden until the inline script marks the page. */
+@layer base {
+  html:not(.js) [data-needs-js] { display: none !important; }
+  .js [data-nojs-label] { display: none !important; }
+  .js [data-tab-panel]:not([data-active]) { display: none !important; }
+}
+
+/* The glyph picture: one SVG text run per brightness level, 6.5 units per character. */
+@layer base {
+  .glyph-art { display: block; width: 100%; height: auto; font-family: var(--font-body); font-size: 10px; font-stretch: var(--stretch-body); user-select: none; }
+  .glyph-art .g1 { fill: var(--glyph-0); } .glyph-art .g2 { fill: var(--glyph-1); } .glyph-art .g3 { fill: var(--glyph-2); } .glyph-art .g4 { fill: var(--glyph-3); }
+  .glyph-art .g5 { fill: var(--glyph-4); } .glyph-art .g6 { fill: var(--glyph-5); } .glyph-art .g7 { fill: var(--glyph-6); } .glyph-art .g8 { fill: var(--glyph-7); }
+}

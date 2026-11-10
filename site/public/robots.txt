@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://p-dim-popov.github.io/recover-secrets/sitemap.xml
