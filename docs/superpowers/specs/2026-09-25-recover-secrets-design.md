@@ -127,6 +127,10 @@ scripts/encrypt-<backend>.sh <pubkey-file> <plaintext-file> <out-file>
 No stdout. Non-zero exit on any failure. Tool stderr is suppressed by the
 driver (gpg and openssl echo input fragments).
 
+Exit 69 means the backend cannot run on this runner (issue #8: `age` is
+missing and the install failed). The backend prints the `::error::` line
+itself, and the driver exits 1 without a second error.
+
 ### 4.4 `detect.sh`
 
 Two functions, sourced by `recover.sh`; `decrypt.sh` carries an identical copy
@@ -236,6 +240,9 @@ The driver prints nothing it did not generate itself.
 - Key fetch failure: HTTP status only, never the body.
 - Invalid/unsupported key: detected format and tool exit code; tool stderr
   suppressed.
+- `age` missing and its install failed: the install command, its exit code,
+  and the last 10 lines of its output. This is the one place tool output
+  reaches the log. The installer never sees the key or the secrets.
 - `secrets-json` not an object, or `include` matches nothing: error with the
   *count* of available names, never the names.
 - Backend failure after plaintext exists: trap shreds; output is tool name and

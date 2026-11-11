@@ -80,10 +80,10 @@ bin_without() { # dir cmd... ; links every command on PATH into dir except cmd..
   done
   for d in "$@"; do rm -f -- "$dir/$d"; done
 }
-# no_age_bin dir ; PATH dir without age or a way to install it (no apt-get, brew, sudo)
-no_age_bin() { bin_without "$1" age apt-get brew sudo; }
-# stub_failing_apt_get dir ; sudo runs its arguments, apt-get fails as it did on 2026-11-11
-stub_failing_apt_get() {
+no_age_bin() { # dir ; a PATH dir without age and without apt-get, brew or sudo to install it
+  bin_without "$1" age apt-get brew sudo
+}
+stub_failing_apt_get() { # dir ; sudo runs its arguments, apt-get fails as it did on 2026-11-11
   cat > "$1/sudo" <<'EOF'
 #!/bin/sh
 exec "$@"

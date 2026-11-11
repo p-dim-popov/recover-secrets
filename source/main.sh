@@ -65,8 +65,10 @@ tr -d '\r' < "$PUB" > "$PUB.lf" && mv "$PUB.lf" "$PUB"   # CRLF from Windows-edi
 BACKEND="$(detect_key_format "$PUB")" \
   || die "Unrecognized public key format: expected PEM RSA, PGP armor, age1, ssh-ed25519 or ssh-rsa"
 ENC="$SCRIPT_DIR/encrypt-$BACKEND.sh"
-rc=0
-bash "$ENC" validate "$PUB" || rc=$?
+set +e
+bash "$ENC" validate "$PUB"
+rc=$?
+set -e
 case $rc in
   0) ;;
   69) exit 1 ;;   # the backend cannot run on this runner and printed the reason

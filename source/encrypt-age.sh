@@ -21,6 +21,7 @@ trap cleanup EXIT
 ensure_age() {
   command -v age >/dev/null 2>&1 && return 0
   local installer rc=0 log="$work/install.log"
+  local fix="Install age in an earlier step. See https://github.com/p-dim-popov/recover-secrets#if-the-runner-cannot-install-age"
   if command -v apt-get >/dev/null 2>&1; then
     installer=apt-get
     # shellcheck disable=SC2024  # this user, not root, writes the log in its own temp dir
@@ -29,11 +30,11 @@ ensure_age() {
     installer=brew
     brew install -q age > "$log" 2>&1 || rc=$?
   else
-    echo "::error::age is not installed, and this runner has no apt-get or brew to install it. Install age in an earlier step. See https://github.com/p-dim-popov/recover-secrets#if-the-age-install-fails" >&2
+    echo "::error::age is not installed, and this runner has no apt-get or brew to install it. $fix" >&2
     return 1
   fi
   command -v age >/dev/null 2>&1 && return 0
-  echo "::error::age is not installed, and \`$installer install age\` did not install it (exit $rc). Install age in an earlier step. See https://github.com/p-dim-popov/recover-secrets#if-the-age-install-fails" >&2
+  echo "::error::age is not installed, and \`$installer install age\` did not install it (exit $rc). $fix" >&2
   if [[ -s "$log" ]]; then
     echo "Last lines of the $installer output:" >&2
     tail -n 10 "$log" >&2
