@@ -69,6 +69,33 @@ gen_gpg() { # homedir pubout
   GNUPGHOME="$1" gpg --batch --export --armor > "$2" 2>/dev/null
 }
 
+# ---- runner without age ---------------------------------------------------
+
+bin_without() { # dir cmd... ; links every command on PATH into dir except cmd...
+  local dir="$1" d; shift
+  mkdir -p "$dir"
+  local IFS=:
+  for d in $PATH; do   # earlier PATH entries win: ln skips names that exist
+    if [[ -d "$d" ]]; then ln -s "$d"/* "$dir"/ 2>/dev/null || true; fi
+  done
+  for d in "$@"; do rm -f -- "$dir/$d"; done
+}
+# no_age_bin dir ; PATH dir without age or a way to install it (no apt-get, brew, sudo)
+no_age_bin() { bin_without "$1" age apt-get brew sudo; }
+# stub_failing_apt_get dir ; sudo runs its arguments, apt-get fails as it did on 2026-11-11
+stub_failing_apt_get() {
+  cat > "$1/sudo" <<'EOF'
+#!/bin/sh
+exec "$@"
+EOF
+  cat > "$1/apt-get" <<'EOF'
+#!/bin/sh
+echo "E: Failed to fetch https://security.ubuntu.com/ubuntu/pool/universe/a/age/age_1.2.1-1build1_amd64v3.deb  Temporary failure resolving 'security.ubuntu.com'" >&2
+exit 100
+EOF
+  chmod +x "$1/sudo" "$1/apt-get"
+}
+
 # ---- driver runner --------------------------------------------------------
 
 run_recover() { # ENV=value ... ; runs $RS_DRIVER (default source/main.sh) with fake GitHub files

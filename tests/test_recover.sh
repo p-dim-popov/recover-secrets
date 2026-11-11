@@ -81,6 +81,12 @@ test_error_key_rejected_by_backend() {
   assert_fails run_recover RS_PUBLIC_KEY="$(cat k.pub)" RS_SECRETS_JSON='{}'
   assert_contains "$(err)" 'rejected by openssl backend'
 }
+test_error_age_install_failed_does_not_blame_key() {
+  gen_ssh ed25519 s; no_age_bin bin; stub_failing_apt_get bin
+  assert_fails run_recover PATH="$PWD/bin" RS_PUBLIC_KEY="$(cat s.pub)" RS_SECRETS_JSON='{"A":"1"}'
+  assert_contains "$(err)" '::error::age is not installed'
+  assert_not_contains "$(err)" 'rejected'
+}
 test_error_secrets_missing() {
   gen_ssh ed25519 s
   assert_fails run_recover RS_PUBLIC_KEY="$(cat s.pub)"

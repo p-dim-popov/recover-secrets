@@ -42,6 +42,22 @@ test_multiple_recipients() {
   assert_eq '{"a":1}' "$(age -d -i s1 out)"
   assert_eq '{"a":1}' "$(age -d -i s2 out)"
 }
+# Exit 69 tells main.sh that age cannot run, so the key is not blamed.
+test_failed_apt_get_install_is_reported() {
+  gen_age a; no_age_bin bin; stub_failing_apt_get bin
+  rc=0; err="$(PATH="$PWD/bin" bash "$ENC" validate a.pub 2>&1)" || rc=$?
+  assert_eq 69 "$rc" "exit code"
+  assert_contains "$err" '::error::age is not installed'
+  assert_contains "$err" 'apt-get install age'
+  assert_contains "$err" "Temporary failure resolving 'security.ubuntu.com'"
+}
+test_runner_without_installer_is_told_to_install_age() {
+  gen_age a; no_age_bin bin
+  rc=0; err="$(PATH="$PWD/bin" bash "$ENC" validate a.pub 2>&1)" || rc=$?
+  assert_eq 69 "$rc" "exit code"
+  assert_contains "$err" '::error::age is not installed'
+  assert_contains "$err" 'Install age in an earlier step'
+}
 test_encrypt_is_silent() {
   gen_ssh ecdsa e; gen_ssh ed25519 s; cat e.pub s.pub > list; echo '{}' > plain.json
   assert_eq "" "$(bash "$ENC" encrypt list plain.json out 2>&1)"
