@@ -82,6 +82,14 @@ case $rc in
   3) die "include matched none of the $(jq 'del(.github_token) | length' <<<"$RS_SECRETS_JSON") available secrets" ;;
   *) die "Filtering secrets failed (exit $rc)" ;;
 esac
+# A secret that is not set arrives as null, e.g. toJSON(secrets.MISSING). Drop it,
+# so decrypt.sh never turns it into the text "null". Report a count, never a name.
+SKIPPED="$(jq '[.[] | select(. == null)] | length' <<<"$FILTERED")"
+if [[ "$SKIPPED" -gt 0 ]]; then
+  FILTERED="$(jq -c 'with_entries(select(.value != null))' <<<"$FILTERED")"
+  [[ "$FILTERED" != "{}" ]] || die "None of the secrets in secrets-json is set"
+  echo "::notice::Skipped $SKIPPED secret(s) that are not set"
+fi
 printf '%s' "$FILTERED" > "$WORK/plaintext.json"
 unset FILTERED RS_SECRETS_JSON
 COUNT="$(jq 'length' "$WORK/plaintext.json")"

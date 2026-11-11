@@ -113,5 +113,21 @@ test_key_validation_precedes_secret_parsing() {
   assert_fails run_recover RS_PUBLIC_KEY='hello' RS_SECRETS_JSON='[1]'
   assert_contains "$(err)" 'Unrecognized public key format'
 }
+# A secret that is not set reaches the script as null, e.g. toJSON(secrets.MISSING).
+test_null_values_are_dropped() {
+  gen_ssh ed25519 s
+  run_recover RS_PUBLIC_KEY="$(cat s.pub)" RS_SECRETS_JSON='{"A":"1","MISSING_NAME":null}'
+  blob="$(blob_from_output)"
+  printf '%s' "${blob#rs1:age:}" | base64 -d > out.age
+  assert_eq '{"A":"1"}' "$(age -d -i s out.age | jq -c .)"
+  assert_contains "$(cat "$TMP/log")" 'Skipped 1 secret(s) that are not set'
+  assert_contains "$(cat "$TMP/log")" 'Encrypted 1 secret(s)'
+  assert_not_contains "$(cat "$TMP/log")$(err)" 'MISSING_NAME'
+}
+test_all_null_values_fail() {
+  gen_ssh ed25519 s
+  assert_fails run_recover RS_PUBLIC_KEY="$(cat s.pub)" RS_SECRETS_JSON='{"A":null}'
+  assert_contains "$(err)" 'None of the secrets in secrets-json is set'
+}
 
 run_tests
