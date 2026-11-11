@@ -206,10 +206,10 @@ function Hero() {
 
 function Workflow() {
   const steps = [
-    'Push it to a throwaway branch and open a pull request.',
+    'Push it to a branch named recover-secrets-tmp.',
     'Copy the blob from the run summary.',
     'Decrypt it on your machine.',
-    'Close the pull request. Delete the branch and the run.',
+    'Delete the branch and the run.',
   ]
   return (
     <section id="workflow" aria-labelledby="workflow-title" className={css({ pt: '2xl', pb: '2xl' })}>
@@ -257,7 +257,7 @@ function Workflow() {
             ]}
           />
           <p className={css({ mt: 'sm', fontSize: 'sm', color: 'muted' })}>
-            Replace <span className={css({ color: 'accent' })}>&lt;your-user&gt;</span> with your GitHub username.
+            Replace <span className={css({ color: 'accent' })}>&lt;your-user&gt;</span> with your GitHub username and the secret names with your own.
           </p>
         </div>
       </div>

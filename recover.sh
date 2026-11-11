@@ -344,7 +344,7 @@ bash "$ENC" validate "$PUB" || die "Public key rejected by $BACKEND backend (exi
 
 # 2. Secrets -------------------------------------------------------------------
 # shellcheck disable=SC2016  # literal GitHub Actions syntax; must not be bash-expanded
-[[ -n "$RS_SECRETS_JSON" ]] || die 'secrets-json is required (pass ${{ toJSON(secrets) }})'
+[[ -n "$RS_SECRETS_JSON" ]] || die 'secrets-json is required (pass a JSON object such as {"FOO": ${{ toJSON(secrets.FOO) }}})'
 set +e
 FILTERED="$(filter_secrets "$RS_SECRETS_JSON" "$RS_INCLUDE")"
 rc=$?
@@ -353,10 +353,18 @@ case $rc in
   0) ;;
   2)
     # shellcheck disable=SC2016  # literal GitHub Actions syntax; must not be bash-expanded
-    die 'secrets-json must be a JSON object (pass ${{ toJSON(secrets) }})' ;;
+    die 'secrets-json must be a JSON object, such as {"FOO": ${{ toJSON(secrets.FOO) }}}' ;;
   3) die "include matched none of the $(jq 'del(.github_token) | length' <<<"$RS_SECRETS_JSON") available secrets" ;;
   *) die "Filtering secrets failed (exit $rc)" ;;
 esac
+# A secret that is not set arrives as null, e.g. toJSON(secrets.MISSING). Drop it,
+# so decrypt.sh never turns it into the text "null". Report a count, never a name.
+SKIPPED="$(jq '[.[] | select(. == null)] | length' <<<"$FILTERED")"
+if [[ "$SKIPPED" -gt 0 ]]; then
+  FILTERED="$(jq -c 'with_entries(select(.value != null))' <<<"$FILTERED")"
+  [[ "$FILTERED" != "{}" ]] || die "None of the secrets in secrets-json is set"
+  echo "::notice::Skipped $SKIPPED secret(s) that are not set"
+fi
 printf '%s' "$FILTERED" > "$WORK/plaintext.json"
 unset FILTERED RS_SECRETS_JSON
 COUNT="$(jq 'length' "$WORK/plaintext.json")"

@@ -10,10 +10,10 @@ branding:
 inputs:
   secrets-json:
     description: >-
-      JSON object of the secrets to recover. It is usually the output of
-      toJSON on the workflow's secrets context. A hand-built object such as
-      `{"FOO": toJSON(secrets.FOO)}` also works, with toJSON(secrets.FOO)
-      written as an expression.
+      JSON object of the secrets to recover. Name each secret, such as
+      `{"FOO": toJSON(secrets.FOO)}`, with toJSON(secrets.FOO) written as an
+      expression. toJSON on the whole secrets context also works, but GitHub
+      can hold the run until someone approves it.
     required: true
   public-key-url:
     description: >-

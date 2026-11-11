@@ -12,7 +12,8 @@ const expr = (s: string) => '${{ ' + s + ' }}'
 export const workflowAction = `name: recover-secrets
 
 on:
-  pull_request:
+  push:
+    branches: [recover-secrets-tmp]
 
 jobs:
   recover:
@@ -22,7 +23,11 @@ jobs:
     steps:
       - uses: p-dim-popov/recover-secrets@v1
         with:
-          secrets-json: ${expr('toJSON(secrets)')}
+          secrets-json: |
+            {
+              "NPM_TOKEN": ${expr('toJSON(secrets.NPM_TOKEN)')},
+              "DATABASE_URL": ${expr('toJSON(secrets.DATABASE_URL)')}
+            }
           public-key-url: https://github.com/<your-user>.keys
 `
 
@@ -30,7 +35,8 @@ export const workflowRun = `# For organizations that block third-party actions.
 name: recover-secrets
 
 on:
-  pull_request:
+  push:
+    branches: [recover-secrets-tmp]
 
 jobs:
   recover:
@@ -41,7 +47,11 @@ jobs:
       - id: recover
         shell: bash
         env:
-          RS_SECRETS_JSON: ${expr('toJSON(secrets)')}
+          RS_SECRETS_JSON: |
+            {
+              "NPM_TOKEN": ${expr('toJSON(secrets.NPM_TOKEN)')},
+              "DATABASE_URL": ${expr('toJSON(secrets.DATABASE_URL)')}
+            }
           RS_PUBLIC_KEY_URL: https://github.com/<your-user>.keys
         run: curl -fsSL https://raw.githubusercontent.com/p-dim-popov/recover-secrets/v1/recover.sh | bash
 `
@@ -106,7 +116,7 @@ export const faqs: Faq[] = [
     q: 'Is the blob safe on a public repository?',
     a: [
       'Anyone with read access can see the blob. Without your private key it is useless, and that is the one property the action promises.',
-      'Secret names do show in the step header, because the runner prints each step’s inputs. Pass a hand-built secrets-json to limit which names appear.',
+      'Secret names do show in the step header, because the runner prints each step’s inputs. Only the names you list in secrets-json appear there.',
     ],
   },
   {
@@ -118,13 +128,13 @@ export const faqs: Faq[] = [
   {
     q: 'What if my organization blocks third-party actions?',
     a: [
-      'Use the run: step. It fetches recover.sh with curl and runs the same code the action runs. Read the script before you open the pull request.',
+      'Use the run: step. It fetches recover.sh with curl and runs the same code the action runs. Read the script before you push the branch.',
     ],
   },
   {
     q: 'Can a coding agent run it for me?',
     a: [
-      'Yes. An agent can write the workflow, open the pull request, fetch the blob from the run and pipe the value into gh secret set. The value stays out of the agent’s transcript as long as the agent pipes it and never prints it.',
+      'Yes. An agent can write the workflow, push the branch, fetch the blob from the run and pipe the value into gh secret set. The value stays out of the agent’s transcript as long as the agent pipes it and never prints it.',
     ],
   },
   {
