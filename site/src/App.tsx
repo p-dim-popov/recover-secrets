@@ -166,7 +166,7 @@ function Hero() {
             Encrypted on the runner to your public key, decrypted on your machine.
           </p>
           <div className={css({ display: 'flex', flexWrap: 'wrap', gap: 'sm', mt: 'xl' })}>
-            <CopyWorkflowButton text={workflowAction} href="#workflow" />
+            <CopyWorkflowButton text={workflowAction} href="#workflow" />{' '}
             <a className={secondaryButton} href={repoUrl}>
               View on GitHub
             </a>

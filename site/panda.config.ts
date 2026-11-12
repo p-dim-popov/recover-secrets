@@ -82,7 +82,9 @@ export default defineConfig({
         step: { value: '70dvh' },
         heroCol: { value: '58rem' },
         well: { value: '64rem' },
-        heroMin: { value: 'calc(100dvh - 74px)' },
+        // Capped: Googlebot renders in a viewport as tall as the page, and an
+        // uncapped 100dvh hero pushes the headline out of its screenshot.
+        heroMin: { value: 'min(calc(100dvh - 74px), 1000px)' },
       },
       radii: { card: v('radius-card'), none: { value: '0' } },
       borderWidths: { hair: v('rule-hair'), thick: { value: '2px' } },
