@@ -91,6 +91,7 @@ cat > "$RS_SRC/encrypt-age.sh" <<'RS_SOURCE_EOF'
 # Usage: encrypt-age.sh validate <pubkey>
 #        encrypt-age.sh encrypt  <pubkey> <plaintext> <out>
 # Recipients: lines starting age1, ssh-ed25519, ssh-rsa. Installs age if missing.
+# Exit 69: age is missing and the install failed. The ::error:: line says why.
 set -euo pipefail
 umask 077
 
@@ -108,12 +109,26 @@ trap cleanup EXIT
 
 ensure_age() {
   command -v age >/dev/null 2>&1 && return 0
+  local installer rc=0 log="$work/install.log"
+  local fix="Install age in an earlier step. See https://github.com/p-dim-popov/recover-secrets#if-the-runner-cannot-install-age"
   if command -v apt-get >/dev/null 2>&1; then
-    sudo apt-get install -y -qq age >/dev/null 2>&1 || true
+    installer=apt-get
+    # shellcheck disable=SC2024  # this user, not root, writes the log in its own temp dir
+    sudo apt-get install -y -qq age > "$log" 2>&1 || rc=$?
   elif command -v brew >/dev/null 2>&1; then
-    brew install -q age >/dev/null 2>&1 || true
+    installer=brew
+    brew install -q age > "$log" 2>&1 || rc=$?
+  else
+    echo "::error::age is not installed, and this runner has no apt-get or brew to install it. $fix" >&2
+    return 1
   fi
-  command -v age >/dev/null 2>&1
+  command -v age >/dev/null 2>&1 && return 0
+  echo "::error::age is not installed, and \`$installer install age\` did not install it (exit $rc). $fix" >&2
+  if [[ -s "$log" ]]; then
+    echo "Last lines of the $installer output:" >&2
+    tail -n 10 "$log" >&2
+  fi
+  return 1
 }
 
 SUPPORTED='^(age1|ssh-ed25519 |ssh-rsa )'
@@ -133,7 +148,7 @@ recipients_from() {
 case "$cmd" in
   validate)
     [[ -n "$pub" ]] || exit 64
-    ensure_age || exit 1
+    ensure_age || exit 69
     recipients_from "$pub" "$work/recipients" warn || exit 1
     : > "$work/empty"
     age -R "$work/recipients" -o "$work/probe" "$work/empty" 2>/dev/null || exit 1
@@ -141,7 +156,7 @@ case "$cmd" in
   encrypt)
     plaintext="${3:-}"; out="${4:-}"
     [[ -n "$pub" && -n "$plaintext" && -n "$out" ]] || exit 64
-    ensure_age || exit 1
+    ensure_age || exit 69
     recipients_from "$pub" "$work/recipients" || exit 1
     age -R "$work/recipients" -o "$out" "$plaintext" 2>/dev/null
     ;;
@@ -340,7 +355,15 @@ tr -d '\r' < "$PUB" > "$PUB.lf" && mv "$PUB.lf" "$PUB"   # CRLF from Windows-edi
 BACKEND="$(detect_key_format "$PUB")" \
   || die "Unrecognized public key format: expected PEM RSA, PGP armor, age1, ssh-ed25519 or ssh-rsa"
 ENC="$SCRIPT_DIR/encrypt-$BACKEND.sh"
-bash "$ENC" validate "$PUB" || die "Public key rejected by $BACKEND backend (exit $?)"
+set +e
+bash "$ENC" validate "$PUB"
+rc=$?
+set -e
+case $rc in
+  0) ;;
+  69) exit 1 ;;   # the backend cannot run on this runner and printed the reason
+  *) die "Public key rejected by $BACKEND backend (exit $rc)" ;;
+esac
 
 # 2. Secrets -------------------------------------------------------------------
 # shellcheck disable=SC2016  # literal GitHub Actions syntax; must not be bash-expanded

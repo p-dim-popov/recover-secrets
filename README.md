@@ -246,6 +246,29 @@ can block. `retention-days` has no equivalent.
 GitHub-hosted runners install `age` with `apt-get` when it is missing.
 Self-hosted runners must preinstall it.
 
+### If the runner cannot install age
+
+If `age` is missing and the runner cannot install it, the step stops
+with the error "age is not installed". If `apt-get` or `brew` fails, the
+log also shows the last lines of the command output. One cause is a
+runner that cannot reach the Ubuntu package servers.
+
+Install `age` in a step before the step that runs recover-secrets. On
+Linux x64 runners, use the step below. It gets `age` from its GitHub
+release and stops if the download does not match the SHA-256 checksum.
+
+```yaml
+      - name: Install age
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/age.tar.gz" https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz
+          echo "cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10  $RUNNER_TEMP/age.tar.gz" | sha256sum -c
+          sudo tar -xzf "$RUNNER_TEMP/age.tar.gz" -C /usr/local/bin --strip-components=1 age/age
+```
+
+On other runners, get `age` from
+[its releases page](https://github.com/FiloSottile/age/releases) and
+put it on the `PATH`.
+
 ## Manual dispatch flow
 
 If your repository keeps the workflow file on the default branch
