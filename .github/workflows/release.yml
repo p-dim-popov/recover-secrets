@@ -1,0 +1,160 @@
+name: Release
+
+# Makes a release from the newest commit on main. Do not tag releases locally.
+# Start it from the Actions tab, or run:
+#   gh workflow run release.yml -f bump=patch    # or bump=minor
+#
+# The workflow stops unless the CI run for that commit passed. Then it tags
+# the commit vX.Y.Z, moves v1 to the same commit, and publishes a GitHub
+# release with generated notes. Every run moves v1, so every `@v1` user and
+# every v1 curl URL gets the new code at once.
+#
+# The tags are lightweight. GitHub signed the squash-merge commit they point
+# at, so the tags page shows them as Verified.
+#
+# The release is not published to the Marketplace, because that needs a 2FA
+# confirmation in the browser. The "Use latest version" button on the
+# Marketplace page still shows the newest release.
+#
+# If a run pushes the tags but fails to publish the release, re-run it. It
+# then publishes the release for the tags it pushed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Part of the version to raise
+        type: choice
+        options: [patch, minor]
+        default: patch
+
+permissions:
+  contents: read
+
+# One release at a time. Never stop a run between the tag push and the
+# release.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash   # bash -eo pipefail: a failed command in a pipe fails the step
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # push the tags, create the release
+      actions: read     # read the CI run of the commit
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ github.sha }}
+    steps:
+      - name: Refuse to run from a branch other than main
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          if [ "$REF" != refs/heads/main ]; then
+            echo "::error::Run this workflow from main, not $REF."
+            exit 1
+          fi
+
+      - name: Check that CI passed on this commit
+        run: |
+          runs="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml \
+            --commit "$SHA" --event push --limit 1 --json status,conclusion,url)"
+          if [ "$(jq length <<< "$runs")" -eq 0 ]; then
+            echo "::error::No CI run found for $SHA."
+            exit 1
+          fi
+          status="$(jq -r '.[0].status' <<< "$runs")"
+          conclusion="$(jq -r '.[0].conclusion' <<< "$runs")"
+          url="$(jq -r '.[0].url' <<< "$runs")"
+          if [ "$conclusion" = action_required ]; then
+            echo "::error::CI for $SHA waits for approval. Click Approve and run on $url, wait for it to pass, then start a new release run."
+            exit 1
+          fi
+          if [ "$status" != completed ] || [ "$conclusion" != success ]; then
+            echo "::error::CI for $SHA is ${status} ${conclusion:-(no result yet)}, not completed success: $url"
+            exit 1
+          fi
+          echo "CI passed: $url"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0   # all tags, to find the newest version
+
+      - name: Pick the version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          semver='^v[0-9]+\.[0-9]+\.[0-9]+$'
+          tagged="$(git tag --points-at "$SHA" | { grep -E "$semver" || true; } | sort -V | tail -n 1)"
+          if [ -n "$tagged" ]; then
+            if gh release view "$tagged" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+              echo "::error::$SHA is already released as $tagged."
+              exit 1
+            fi
+            # An earlier run pushed the tags and failed before the release.
+            echo "$tagged is tagged but has no release. Publishing it."
+            {
+              echo "tag=$tagged"
+              echo "major_tag=${tagged%%.*}"
+              echo "push=false"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # A re-run keeps the commit of the first attempt. Tag only the
+          # current tip of main, so v1 never moves back to older code.
+          tip="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$SHA" != "$tip" ]; then
+            echo "::error::main moved from $SHA to $tip after this run started. Start a new release run."
+            exit 1
+          fi
+
+          latest="$(git tag -l 'v*' | { grep -E "$semver" || true; } | sort -V | tail -n 1)"
+          if [ -z "$latest" ]; then
+            echo "::error::No vX.Y.Z tag found."
+            exit 1
+          fi
+          IFS=. read -r major minor patch <<< "${latest#v}"
+          case "$BUMP" in
+            patch) patch=$((patch + 1)) ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            *) echo "::error::bump must be patch or minor, not $BUMP."; exit 1 ;;
+          esac
+          echo "Newest tag: $latest. Next: v$major.$minor.$patch"
+          {
+            echo "tag=v$major.$minor.$patch"
+            echo "major_tag=v$major"
+            echo "push=true"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Tag the commit and move the major tag
+        if: steps.version.outputs.push == 'true'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          MAJOR_TAG: ${{ steps.version.outputs.major_tag }}
+        run: |
+          git tag "$TAG" "$SHA"
+          git tag -f "$MAJOR_TAG" "$SHA"
+          # Both tags or neither.
+          git push --atomic origin "refs/tags/$TAG" "+refs/tags/$MAJOR_TAG"
+
+      - name: Publish the release
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          MAJOR_TAG: ${{ steps.version.outputs.major_tag }}
+        run: |
+          moved="\`$MAJOR_TAG\` now points at this release."
+          notes="$RUNNER_TEMP/notes.md"
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            -f tag_name="$TAG" --jq .body > "$notes"
+          printf '\n%s\n' "$moved" >> "$notes"
+          url="$(gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --verify-tag --title "$TAG" --notes-file "$notes")"
+          printf 'Released [%s](%s) from %s.\n\n%s\n' \
+            "$TAG" "$url" "\`$SHA\`" "$moved" >> "$GITHUB_STEP_SUMMARY"
