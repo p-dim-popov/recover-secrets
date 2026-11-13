@@ -456,18 +456,6 @@ Run the test suite:
 bash tests/run.sh
 ```
 
-## Release checklist
-
-1. Run `make check` and `bash tests/run.sh`.
-2. Tag the release and move `v1`. The `uses:` reference and both `curl`
-   URLs serve whatever `v1` points to:
-   ```bash
-   git tag vX.Y.Z && git tag -f v1 && git push origin vX.Y.Z && git push -f origin v1
-   ```
-3. Create a GitHub release from the new tag.
-4. On the first release, tick "Publish this Action to the GitHub
-   Marketplace".
-
 ## License
 
 MIT. See [LICENSE](LICENSE).
